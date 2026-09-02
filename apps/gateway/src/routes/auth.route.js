@@ -7,6 +7,7 @@ router.route("/health").get(authControllers.getAuthHealth);
 router.route("/register").post(authControllers.registration);
 router.route("/login").post(authControllers.userLogin);
 router.route("/refresh").post(authControllers.tokenRefresh);
-router.route("/me").get(verifyAccessToken,authControllers.me);
+router.route("/me").get(verifyAccessToken, authControllers.me);
+router.route("/logout").post(authControllers.userLogOut);
 
 module.exports = router;

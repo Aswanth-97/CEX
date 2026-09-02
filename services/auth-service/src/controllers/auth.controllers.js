@@ -52,6 +52,20 @@ const tokenRefresh = async (req, res, next) => {
   }
 };
 
+const userLogout = async (req, res, next) => {
+  try {
+    const { refreshtoken } = req.body;
+    const result = await authService.logout(refreshtoken);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const JWKSendpoint = async (req, res, next) => {
   try {
     const publicJWK = await getPublicJWK();
@@ -68,4 +82,5 @@ module.exports = {
   userLogin,
   tokenRefresh,
   JWKSendpoint,
+  userLogout,
 };

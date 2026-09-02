@@ -3,6 +3,7 @@ const {
   registerUser,
   login,
   refresh,
+  logout,
 } = require("../services/auth.service");
 
 const getAuthHealth = async (req, res, next) => {
@@ -69,12 +70,34 @@ const tokenRefresh = async (req, res, next) => {
       sameSite: "lax",
     });
 
-    res
-      .status(response.status)
-      .json({
-        message: "Access token refreshed successfully",
-        newAccessToken: newAccessToken,
-      });
+    res.status(response.status).json({
+      message: "Access token refreshed successfully",
+      newAccessToken: newAccessToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const userLogOut = async (req, res, next) => {
+  try {
+    const refreshtoken = req.cookies.refreshToken;
+
+    if (!refreshtoken) {
+      const error = new Error("RefreshToken not found");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const response = await logout(refreshtoken);
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
+
+    res.status(200).json(response.data);
   } catch (error) {
     next(error);
   }
@@ -87,4 +110,11 @@ const me = (req, res, next) => {
   });
 };
 
-module.exports = { getAuthHealth, registration, userLogin, tokenRefresh, me };
+module.exports = {
+  getAuthHealth,
+  registration,
+  userLogin,
+  tokenRefresh,
+  userLogOut,
+  me,
+};

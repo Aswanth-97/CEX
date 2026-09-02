@@ -58,6 +58,9 @@ const login = async (email, password) => {
 
   const foundUser = user.rows[0];
 
+ 
+  
+
   const pwd_hash = foundUser.password_hash;
 
   const validPassword = await argon2.verify(pwd_hash, password);
@@ -168,4 +171,31 @@ const refresh = async (refreshtoken) => {
   }
 };
 
-module.exports = { registerUser, login, refresh };
+const logout = async (refreshToken) => {
+  const decoded = verify_jwt(refreshToken);
+
+  const { jti } = decoded;
+
+  if (!jti) {
+    const error = new Error("Invalid refresh token");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const result = await pool.query(
+    "UPDATE refresh_tokens SET revoked_at= NOW() WHERE jti=$1 AND revoked_at IS NULL RETURNING id",
+    [jti],
+  );
+
+  if (result.rows.length === 0) {
+    const error = new Error("Refresh token is invalid or already revoked");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  return {
+    message: "Logged out successfully",
+  };
+};
+
+module.exports = { registerUser, login, refresh, logout };

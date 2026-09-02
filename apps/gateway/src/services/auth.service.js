@@ -30,4 +30,11 @@ const refresh = async (refreshtoken) => {
   return response;
 };
 
-module.exports = { checkAuthHealth, registerUser, login, refresh };
+const logout = async (refreshtoken) => {
+  const response = await axios.post(`${AUTH_SERVICE_URL}/api/auth/logout`, {
+    refreshtoken,
+  });
+  return response;
+};
+
+module.exports = { checkAuthHealth, registerUser, login, refresh, logout };

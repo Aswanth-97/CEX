@@ -27,7 +27,7 @@ const verifyAccessToken = async (req, res, next) => {
     req.user = payload.userInfo;
     next();
   } catch (error) {
-    error.statusCode = 401;       
+    error.statusCode = 401;
     next(error);
   }
 };
