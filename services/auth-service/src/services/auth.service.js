@@ -102,57 +102,70 @@ const refresh = async (refreshtoken) => {
     throw error;
   }
 
-  const resultRefreshToken = await pool.query(
-    "SELECT * FROM refresh_tokens WHERE jti=$1",
-    [jti],
-  );
+  const client = await pool.connect();
 
-  if (resultRefreshToken.rows.length === 0) {
-    const error = new Error("Refresh token not found");
-    error.statusCode = 401;
+  try {
+    await client.query("BEGIN");
+
+    const resultRefreshToken = await client.query(
+      "SELECT * FROM refresh_tokens WHERE jti=$1 FOR UPDATE",
+      [jti],
+    );
+
+    if (resultRefreshToken.rows.length === 0) {
+      const error = new Error("Refresh token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const foundRefreshToken = resultRefreshToken.rows[0];
+
+    if (foundRefreshToken.revoked_at !== null) {
+      const error = new Error("Refresh token has already been used");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const foundUser = await client.query("SELECT * FROM users WHERE email=$1", [
+      email,
+    ]);
+
+    if (foundUser.rows.length === 0) {
+      const error = new Error("User not found");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const user = foundUser.rows[0];
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    const decodedRefreshToken = jwt.decode(newRefreshToken);
+
+    const expiresAt = new Date(decodedRefreshToken.exp * 1000);
+
+    const newTokenResult = await client.query(
+      `INSERT INTO refresh_tokens (user_id,jti,expires_at) VALUES($1,$2,$3) RETURNING id`,
+      [user.id, decodedRefreshToken.jti, expiresAt],
+    );
+
+    const newRefreshTokenId = newTokenResult.rows[0].id;
+
+    await client.query(
+      `UPDATE refresh_tokens SET revoked_at=NOW(),replaced_by=$1 WHERE jti=$2`,
+      [newRefreshTokenId, jti],
+    );
+
+    await client.query("COMMIT");
+
+    return { newAccessToken: newAccessToken, newRefreshToken: newRefreshToken };
+  } catch (error) {
+    await client.query("ROLLBACK");
     throw error;
+  } finally {
+    client.release();
   }
-
-  const foundRefreshToken = resultRefreshToken.rows[0];
-
-  if (foundRefreshToken.revoked_at !== null) {
-    const error = new Error("Refresh token has already been used");
-    error.statusCode = 401;
-    throw error;
-  }
-
-  const foundUser = await pool.query("SELECT * FROM users WHERE email=$1", [
-    email,
-  ]);
-
-  if (foundUser.rows.length === 0) {
-    const error = new Error("User not found");
-    error.statusCode = 401;
-    throw error;
-  }
-
-  const user = foundUser.rows[0];
-
-  const newAccessToken = generateAccessToken(user);
-  const newRefreshToken = generateRefreshToken(user);
-
-  const decodedRefreshToken = jwt.decode(newRefreshToken);
-
-  const expiresAt = new Date(decodedRefreshToken.exp * 1000);
-
-  const newTokenResult = await pool.query(
-    `INSERT INTO refresh_tokens (user_id,jti,expires_at) VALUES($1,$2,$3) RETURNING id`,
-    [user.id, decodedRefreshToken.jti, expiresAt],
-  );
-
-  const newRefreshTokenId = newTokenResult.rows[0].id;
-
-  await pool.query(
-    `UPDATE refresh_tokens SET revoked_at=NOW(),replaced_by=$1 WHERE jti=$2`,
-    [newRefreshTokenId, jti],
-  );
-
-  return { newAccessToken: newAccessToken, newRefreshToken: newRefreshToken };
 };
 
 module.exports = { registerUser, login, refresh };
