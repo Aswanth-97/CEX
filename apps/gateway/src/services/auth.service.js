@@ -1,8 +1,12 @@
 const axios = require("axios");
 const { AUTH_SERVICE_URL } = require("../config/env");
 
-const checkAuthHealth = async () => {
-  const response = await axios.get(`${AUTH_SERVICE_URL}/api/auth/health`);
+const checkAuthHealth = async (requestId) => {
+  const response = await axios.get(`${AUTH_SERVICE_URL}/health`, {
+    headers: {
+      "X-Request-ID": requestId,
+    },
+  });
   return response;
 };
 
@@ -15,11 +19,19 @@ const registerUser = async (userName, email, password) => {
   return response;
 };
 
-const login = async (email, password) => {
-  const response = await axios.post(`${AUTH_SERVICE_URL}/api/auth/login`, {
-    email,
-    password,
-  });
+const login = async (email, password, requestId) => {
+  const response = await axios.post(
+    `${AUTH_SERVICE_URL}/api/auth/login`,
+    {
+      email,
+      password,
+    },
+    {
+      headers: {
+        "X-Request-ID": requestId,
+      },
+    },
+  );
   return response;
 };
 

@@ -8,7 +8,7 @@ const {
 
 const getAuthHealth = async (req, res, next) => {
   try {
-    const response = await checkAuthHealth();
+    const response = await checkAuthHealth(req.id);
     res.status(response.status).json(response.data);
   } catch (error) {
     next(error);
@@ -16,7 +16,7 @@ const getAuthHealth = async (req, res, next) => {
 };
 
 const registration = async (req, res, next) => {
-  const { userName, email, password } = req.body;
+  const { userName, email, password } = req.body || {};
 
   try {
     const response = await registerUser(userName, email, password);
@@ -28,8 +28,8 @@ const registration = async (req, res, next) => {
 
 const userLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const response = await login(email, password);
+    const { email, password } = req.body || {};
+    const response = await login(email, password, req.id);
 
     const { refreshToken, accessToken, userName, id } = response.data.result;
 

@@ -15,25 +15,16 @@ app.use("/api/auth", authRoutes);
 
 app.use(errorHandler);
 
-// pool
-//   .query("SELECT NOW()")
-//   .then((result) => {
-//     logger.info(`PostgreSQL connected: ${result.rows[0].now}`);
-
-//   })
-//   .catch((err) => {
-//     logger.error(err, "PostgreSQL connection failed");
-//   });
-
 pool
-  .query("SELECT * FROM users")
+  .query("SELECT NOW()")
   .then((result) => {
-    logger.info(`PostgreSQL connected. Users found: ${result.rows.length}`);
+    logger.info(`PostgreSQL connected: ${result.rows[0].now}`);
 
     app.listen(PORT, () => {
       logger.info(`auth-service running on ${PORT}`);
     });
   })
   .catch((err) => {
-    logger.error(err, "PostgreSQL connection failed");
+    logger.error({ err }, "PostgreSQL connection failed");
+    process.exit(1);
   });

@@ -6,6 +6,8 @@ const {
   generateRefreshToken,
 } = require("../utils/tokens");
 const verify_jwt = require("../utils/jwt_verify");
+const createAccount = require("../clients/account.client");
+const logger = require("../utils/logger");
 
 const registerUser = async (userName, email, password) => {
   const username = userName?.trim();
@@ -29,12 +31,57 @@ const registerUser = async (userName, email, password) => {
 
   const pwd_hash = await argon2.hash(password);
 
-  const result = await pool.query(
-    `INSERT INTO users (username,email,password_hash) values($1,$2,$3) RETURNING id,email,username,created_at`,
-    [username, userEmail, pwd_hash],
-  );
+  const client = await pool.connect();
 
-  return result.rows[0];
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `INSERT INTO users (username,email,password_hash) values($1,$2,$3) RETURNING id,email,username,created_at`,
+      [username, userEmail, pwd_hash],
+    );
+
+    const user = result.rows[0];
+
+    await client.query(
+      `INSERT INTO outbox_events (event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`,
+      [
+        "UserRegistered",
+        "User",
+        user.id,
+        JSON.stringify({
+          userId: user.id,
+          userName: user.username,
+          email: user.email,
+        }),
+      ],
+    );
+
+    await client.query("COMMIT");
+
+    return user;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      logger.error(
+        { err: rollbackError },
+        "Failed to rollback registration transaction",
+      );
+    }
+
+    logger.error(
+      {
+        err: error,
+        operation: "registerUser",
+      },
+      "User registration transaction failed",
+    );
+
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const login = async (email, password) => {
@@ -57,9 +104,6 @@ const login = async (email, password) => {
   }
 
   const foundUser = user.rows[0];
-
- 
-  
 
   const pwd_hash = foundUser.password_hash;
 

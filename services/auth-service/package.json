@@ -5,7 +5,9 @@
   "description": "CEX Auth Service",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node-pg-migrate"
   },
   "license": "ISC",
   "type": "commonjs",
@@ -15,6 +17,7 @@
     "express": "^5.2.1",
     "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
+    "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
     "pino": "^10.3.1"
   }

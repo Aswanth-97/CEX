@@ -1,7 +1,7 @@
 const {
   REFRESH_TOKEN_SECRET,
   REFRESH_TOKEN_EXP,
-  ACCES_TOKEN_EXP,
+  ACCESS_TOKEN_EXP,
 } = require("../config/env");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
@@ -20,7 +20,7 @@ const generateAccessToken = (user) => {
     },
     privateKey,
     {
-      expiresIn: ACCES_TOKEN_EXP,
+      expiresIn: ACCESS_TOKEN_EXP,
       algorithm: "RS256",
       keyid: "access-token-key-1",
     },

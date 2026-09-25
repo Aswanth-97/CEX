@@ -14,6 +14,7 @@ const errorHandler = (err, req, res, next) => {
         stack: err.stack,
       },
 
+      requestId: req.id,
       statusCode,
       URL: req.originalUrl,
       method: req.method,

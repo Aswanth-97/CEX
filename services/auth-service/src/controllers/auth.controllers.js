@@ -1,16 +1,24 @@
 const getPublicJWK = require("../config/keys");
 const authService = require("../services/auth.service");
+const pool = require("../config/db");
 
-const authHealthCheck = async (req, res) => {
-  res.status(200).json({
-    service: "auth-service",
-    status: "ok",
-  });
+const authHealthCheck = async (req, res, next) => {
+  try {
+    await pool.query("SELECT 1");
+    res.status(200).json({
+      success: true,
+      service: "auth-service",
+      status: "ok",
+      database: "ok",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const register = async (req, res, next) => {
   try {
-    const { userName, email, password } = req.body;
+    const { userName, email, password } = req.body || {};
     const user = await authService.registerUser(userName, email, password);
 
     res.status(201).json({
@@ -25,7 +33,7 @@ const register = async (req, res, next) => {
 
 const userLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     const result = await authService.login(email, password);
 
     res.status(200).json({
