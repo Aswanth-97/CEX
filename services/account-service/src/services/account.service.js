@@ -20,7 +20,7 @@ const createAccount = async ({ eventId, eventType, userId, userName }) => {
     )
     VALUES ($1, $2)
     ON CONFLICT (event_id) DO NOTHING
-    RETURNING event_id
+    RETURNING event_id,event_type
   `,
       [eventId, eventType],
     );
@@ -37,6 +37,16 @@ const createAccount = async ({ eventId, eventType, userId, userName }) => {
 
     await client.query("COMMIT");
 
+    logger.info(
+      {
+        eventId: eventResult.event_id,
+        eventType: eventResult.event_type,
+        accountId: accountResult.id,
+        authUserId: accountResult.auth_user_id,
+      },
+      "Account created from UserRegistered event",
+    );
+
     return {
       processed: true,
       duplicate: false,
@@ -44,7 +54,15 @@ const createAccount = async ({ eventId, eventType, userId, userName }) => {
     };
   } catch (error) {
     await client.query("ROLLBACK");
-    logger.error({ err: error }, "Failed create account");
+    logger.error(
+      {
+        err: error,
+        eventId,
+        eventType,
+        authUserId: userId,
+      },
+      "Failed to create account",
+    );
     throw error;
   } finally {
     client.release();

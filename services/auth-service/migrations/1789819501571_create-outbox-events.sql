@@ -14,6 +14,11 @@ CREATE TABLE public.outbox_events(
       PRIMARY KEY (id)
 )
 
+
+
+
+
+
 -- Down Migration
 
 DROP TABLE public.outbox_events;s

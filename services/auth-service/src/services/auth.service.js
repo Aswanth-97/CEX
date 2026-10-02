@@ -6,7 +6,6 @@ const {
   generateRefreshToken,
 } = require("../utils/tokens");
 const verify_jwt = require("../utils/jwt_verify");
-const createAccount = require("../clients/account.client");
 const logger = require("../utils/logger");
 
 const registerUser = async (userName, email, password) => {
@@ -42,6 +41,21 @@ const registerUser = async (userName, email, password) => {
     );
 
     const user = result.rows[0];
+
+    const role = await client.query(
+      `SELECT id FROM public.roles WHERE role=$1`,
+      ["USER"],
+    );
+    if (role.rows.length === 0) {
+      const error = new Error("Default USER role is not configured");
+      error.statusCode = 500;
+      throw error;
+    }
+
+    await client.query(
+      `INSERT INTO public.user_roles (user_id,role_id) VALUES ($1,$2)`,
+      [user.id, role.rows[0].id],
+    );
 
     await client.query(
       `INSERT INTO outbox_events (event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`,
@@ -115,6 +129,22 @@ const login = async (email, password) => {
     throw error;
   }
 
+  const rolesResult = await pool.query(
+    `
+  SELECT r.role
+  FROM public.user_roles ur
+  JOIN public.roles r
+    ON r.id = ur.role_id
+  WHERE ur.user_id = $1
+  ORDER BY r.role
+  `,
+    [foundUser.id],
+  );
+
+  const roles = rolesResult.rows.map((row) => row.role);
+
+  foundUser.roles = roles;
+
   const accessToken = generateAccessToken(foundUser);
 
   const refreshToken = generateRefreshToken(foundUser);
@@ -134,6 +164,7 @@ const login = async (email, password) => {
     refreshToken: refreshToken,
     userName: foundUser.username,
     email: foundUser.email,
+    roles: foundUser.roles,
   };
 };
 
@@ -141,7 +172,7 @@ const refresh = async (refreshtoken) => {
   const decoded = verify_jwt(refreshtoken);
 
   const { jti } = decoded;
-  const { userName, email } = decoded.userInfo;
+  const { email } = decoded.userInfo;
 
   if (!jti) {
     const error = new Error("Invalid refresh token");
@@ -184,6 +215,20 @@ const refresh = async (refreshtoken) => {
     }
 
     const user = foundUser.rows[0];
+
+    const rolesResult = await client.query(
+      `
+        SELECT r.role
+        FROM public.user_roles ur
+        JOIN public.roles r
+          ON r.id = ur.role_id
+        WHERE ur.user_id = $1
+        ORDER BY r.role
+        `,
+      [user.id],
+    );
+
+    user.roles = rolesResult.rows.map((row) => row.role);
 
     const newAccessToken = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);

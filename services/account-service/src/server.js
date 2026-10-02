@@ -3,8 +3,10 @@ const logger = require("./utils/logger");
 const pinoHttp = require("pino-http");
 const errorHandler = require("./middleware/errorHandler");
 const accountRoute = require("./routes/account.Routes");
-const assetRoute = require("./routes/asset.Routes");
+const assetRoutes = require("./routes/asset.Routes");
 const balanceRoutes = require("./routes/balance.Routes");
+const depositRoutes = require("./routes/deposit.Routes");
+const withdrawalRoutes = require("./routes/withdrawals.routes");
 const crypto = require("crypto");
 
 const app = express();
@@ -28,8 +30,10 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/internal/accounts", accountRoute);
-app.use("/api/assets", assetRoute);
+app.use("/api/assets", assetRoutes);
 app.use("/api/accounts", balanceRoutes);
+app.use("/api/accounts", depositRoutes);
+app.use("/api/accounts", withdrawalRoutes);
 
 app.use(errorHandler);
 

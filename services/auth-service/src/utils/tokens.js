@@ -16,7 +16,12 @@ const privateKey = fs.readFileSync(
 const generateAccessToken = (user) => {
   const accestoken = jwt.sign(
     {
-      userInfo: { userId: user.id, userName: user.username, email: user.email },
+      userInfo: {
+        userId: user.id,
+        userName: user.username,
+        email: user.email,
+        roles: user.roles || [],
+      },
     },
     privateKey,
     {

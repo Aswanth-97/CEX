@@ -1,7 +1,7 @@
 const logger = require("../utils/logger");
 
 const errorHandler = (err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || (err.code === "23505" ? 409 : 500);
 
   logger.error(
     {
@@ -18,8 +18,18 @@ const errorHandler = (err, req, res, next) => {
     err.message || "Request Failed",
   );
 
+  let message = err.message;
+
+  if (err.code === "23505") {
+    message = "Resource already exists";
+  }
+
+  if (statusCode === 500) {
+    message = "Internal Server Error";
+  }
+
   res.status(statusCode).json({
-    message: statusCode === 500 ? "Internal Server Error" : err.message,
+    message,
     success: false,
   });
 };
