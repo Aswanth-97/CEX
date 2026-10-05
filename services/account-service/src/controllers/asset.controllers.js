@@ -71,4 +71,5 @@ module.exports = {
   getAssetById,
   createAsset,
   updateAsset,
+ 
 };

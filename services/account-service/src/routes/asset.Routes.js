@@ -33,6 +33,7 @@ router
   .patch(
     verifyAccessToken,
     verifyRoles(ROLES_LIST.ADMIN),
+    validator.validate(getAssetByIdSchema, "params"),
     validator.validate(updateAssetSchema, "body"),
     assetController.updateAsset,
   );

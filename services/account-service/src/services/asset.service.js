@@ -22,4 +22,9 @@ const updateAsset = async ({ name, status, assetId }) => {
   return assetRepository.updateAsset({ name, status, assetId });
 };
 
-module.exports = { getAllAssets, getAssetById, createAsset, updateAsset };
+module.exports = {
+  getAllAssets,
+  getAssetById,
+  createAsset,
+  updateAsset,
+};

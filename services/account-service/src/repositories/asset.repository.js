@@ -59,4 +59,9 @@ const updateAsset = async ({ name, status, assetId }) => {
   return updated.rows[0];
 };
 
-module.exports = { getAllAssets, getAssetById, createAsset, updateAsset };
+module.exports = {
+  getAllAssets,
+  getAssetById,
+  createAsset,
+  updateAsset,
+};
