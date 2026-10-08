@@ -39,10 +39,10 @@ const createAccount = async ({ eventId, eventType, userId, userName }) => {
 
     logger.info(
       {
-        eventId: eventResult.event_id,
-        eventType: eventResult.event_type,
-        accountId: accountResult.id,
-        authUserId: accountResult.auth_user_id,
+        eventId: eventResult.rows[0].event_id,
+        eventType: eventResult.rows[0].event_type,
+        accountId: accountResult.rows[0].id,
+        authUserId: accountResult.rows[0].auth_user_id,
       },
       "Account created from UserRegistered event",
     );

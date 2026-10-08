@@ -1,11 +1,15 @@
-const consumer = require("../config/kafka");
-const { isRetryableError } = require("../utils/error-policy");
+const { consumer, producer } = require("../config/kafka");
 const logger = require("../utils/logger");
 const { createAccount } = require("./account.service");
+const { withRetry } = require("../utils/retry");
+const { publishDLQ } = require("./kafkaPublisher");
 
 const connectConsumer = async () => {
   await consumer.connect();
   logger.info("kafka consumer connected ");
+
+  await producer.connect();
+  logger.info("kafka producer connected ");
 
   await consumer.subscribe({ topic: "user-events", fromBeginning: false });
 
@@ -42,6 +46,15 @@ const runConsumer = async () => {
           "Failed to parse Kafka event",
         );
 
+        await publishDLQ({
+          error,
+          attempt: 0,
+          rawValue: value,
+          topic,
+          partition,
+          offset: message.offset,
+        });
+
         return;
       }
 
@@ -58,32 +71,40 @@ const runConsumer = async () => {
 
       if (event.eventType === "UserRegistered") {
         try {
-          const result = await createAccount({
-            eventId: event.eventId,
-            eventType: event.eventType,
-            userId: event.payload.userId,
-            userName: event.payload.userName,
-          });
+          const result = await withRetry(() =>
+            createAccount({
+              eventId: event.eventId,
+              eventType: event.eventType,
+              userId: event.payload.userId,
+              userName: event.payload.userName,
+            }),
+          );
 
           logger.info({ result }, "account created ");
 
           return;
         } catch (error) {
-          const retryable = isRetryableError(error);
-
           logger.error(
             {
               err: error,
               eventId: event.eventId,
               eventType: event.eventType,
-              retryable,
+              retryCount: error.retryCount,
             },
             "Failed to process UserRegistered event",
           );
 
-          throw error;
+          await publishDLQ({ event, error, attempt: error.retryCount });
+
+          return;
         }
       }
+
+      const error = new Error(
+        `Unsupported Kafka event type: ${event.eventType}`,
+      );
+
+      error.code = "UNSUPPORTED_EVENT_TYPE";
 
       logger.warn(
         {
@@ -92,6 +113,17 @@ const runConsumer = async () => {
         },
         "Unsupported Kafka event type",
       );
+
+      await publishDLQ({
+        event,
+        error,
+        attempt: 0,
+        topic,
+        partition,
+        offset: message.offset,
+      });
+
+      return;
     },
   });
 };

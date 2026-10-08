@@ -8,4 +8,6 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "account-service" });
 
-module.exports = consumer;
+const producer = kafka.producer();
+
+module.exports = { consumer, producer };
