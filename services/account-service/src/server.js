@@ -9,6 +9,8 @@ const depositRoutes = require("./routes/deposit.Routes");
 const withdrawalRoutes = require("./routes/withdrawals.routes");
 const assetNetorkRoutes = require("./routes/assetNetwork.Route");
 const marketRoutes = require("./routes/markets.Routes");
+const orderRoutes = require("./routes/order.Routes");
+const orderBookRoutes = require("./routes/orderbook.Routes");
 const crypto = require("crypto");
 
 const app = express();
@@ -38,6 +40,8 @@ app.use("/api/accounts", balanceRoutes);
 app.use("/api/accounts", depositRoutes);
 app.use("/api/accounts", withdrawalRoutes);
 app.use("/api/markets", marketRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/order-book", orderBookRoutes);
 
 app.use(errorHandler);
 

@@ -72,7 +72,7 @@ const lockBalance = async ({ accountId, assetId, amount, client = pool }) => {
   return result.rows[0];
 };
 
-const unlockBalance = async ({ accountId, assetId, amount,client=pool }) => {
+const unlockBalance = async ({ accountId, assetId, amount, client = pool }) => {
   const query = `UPDATE public.account_balances 
   SET locked_balance=locked_balance-$3,
   available_balance=available_balance+$3,
@@ -106,6 +106,46 @@ const finalizeWithdrawalBalance = async ({
   return result.rows[0];
 };
 
+const getBalanceForUpdate = async ({ client, accountId, assetId }) => {
+  const result = await client.query(
+    `
+      SELECT
+        id,
+        account_id,
+        asset_id,
+        available_balance,
+        locked_balance,
+        created_at,
+        updated_at
+      FROM public.account_balances
+      WHERE account_id = $1
+        AND asset_id = $2
+      FOR UPDATE
+    `,
+    [accountId, assetId],
+  );
+
+  return result.rows[0] || null;
+};
+
+const lockBalanceForOrder = async ({ client, balanceId, amount }) => {
+  const result = await client.query(
+    `
+      UPDATE public.account_balances
+      SET
+        available_balance = available_balance - $1,
+        locked_balance = locked_balance + $1,
+        updated_at = NOW()
+      WHERE id = $2
+        AND available_balance >= $1
+      RETURNING *
+    `,
+    [amount, balanceId],
+  );
+
+  return result.rows[0] || null;
+};
+
 module.exports = {
   getBalancesByAccountId,
   creditBalance,
@@ -113,4 +153,6 @@ module.exports = {
   lockBalance,
   unlockBalance,
   finalizeWithdrawalBalance,
+  getBalanceForUpdate,
+  lockBalanceForOrder,
 };

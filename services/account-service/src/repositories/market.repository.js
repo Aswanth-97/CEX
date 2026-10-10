@@ -33,8 +33,10 @@ const getMarketById = async ({ marketId }) => {
         m.symbol,
         m.base_asset_id,
         base.symbol AS base_asset,
+        base.decimals AS base_asset_decimals,
         m.quote_asset_id,
         quote.symbol AS quote_asset,
+        quote.decimals AS quote_asset_decimals,
         m.status,
         m.price_precision,
         m.quantity_precision,
@@ -54,7 +56,6 @@ const getMarketById = async ({ marketId }) => {
 
   return result.rows[0] || null;
 };
-
 const getMarketBySymbol = async ({ symbol }) => {
   const result = await pool.query(
     `

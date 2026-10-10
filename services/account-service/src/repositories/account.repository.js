@@ -19,4 +19,10 @@ const getAccountById = async ({ accountId }) => {
   return result.rows[0];
 };
 
-module.exports = { getAccountById };
+const getAccountByUserId = async ({ userId }) => {
+  const query = ` SELECT * FROM public.accounts WHERE auth_user_id = $1`;
+  const result = await pool.query(query, [userId]);
+  return result.rows[0];
+};
+
+module.exports = { getAccountById, getAccountByUserId };
