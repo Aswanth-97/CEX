@@ -3,7 +3,7 @@ class Queue {
     this.queue = [];
   }
 
-  isempty() {
+  isEmpty() {
     return this.queue.length === 0;
   }
 
@@ -12,7 +12,7 @@ class Queue {
   }
 
   dequeue() {
-    if (this.isempty()) {
+    if (this.isEmpty()) {
       return null;
     }
     return this.queue.shift();
@@ -23,7 +23,7 @@ class Queue {
   }
 
   peek() {
-    if (this.isempty()) {
+    if (this.isEmpty()) {
       return null;
     }
     return this.queue[0];

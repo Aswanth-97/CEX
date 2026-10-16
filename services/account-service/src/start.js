@@ -3,13 +3,16 @@ const { PORT } = require("./config/env");
 const { connectConsumer, runConsumer } = require("./services/consumer.service");
 const logger = require("./utils/logger");
 const app = require("./server");
-
+const {
+  initializeAll,
+} = require("../src/services/matching-engine/matchingEngineRegistry");
 const start = async () => {
   try {
     const result = await pool.query("SELECT NOW()");
     logger.info({ databaseTime: result.rows[0].now }, "PostgreSQL connected");
 
     await connectConsumer();
+    await initializeAll();
 
     runConsumer().catch((err) => {
       logger.error({ err }, "Kafka consumer stopped unexpectedly");

@@ -94,6 +94,40 @@ const getAllOrders = async () => {
   return result.rows;
 };
 
+const updateOrderFillWithClient = async ({
+  orderId,
+  filledQuantity,
+  client,
+}) => {
+  const query = `
+   UPDATE public.orders
+   SET 
+   filled_quantity = filled_quantity+$1,
+   status= CASE 
+   WHEN filled_quantity+$1=quantity THEN 'FILLED' ELSE  'PARTIALLY_FILLED'
+   END,
+   updated_at = NOW()
+   WHERE id =$2 AND
+   status IN ('NEW','PARTIALLY_FILLED') AND 
+   $1 >0 AND 
+   filled_quantity+$1 <= quantity 
+   RETURNING *
+
+   `;
+
+  const result = await client.query(query, [filledQuantity, orderId]);
+
+  return result.rows[0] || null;
+};
+
+const getOrdersForUpdate = async ({ client, orderIds }) => {
+  const query = ` SELECT * FROM public.orders WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE `;
+
+  const result = await client.query(query, [orderIds]);
+
+  return result.rows;
+};
+
 module.exports = {
   getAllOrders,
   createOrder,
@@ -101,5 +135,7 @@ module.exports = {
   getOrderById,
   createOrderWithClient,
   cancelOrderWithClient,
-  getOrderForUpdate
+  getOrderForUpdate,
+  updateOrderFillWithClient,
+  getOrdersForUpdate,
 };

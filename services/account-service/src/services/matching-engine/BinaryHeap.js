@@ -8,6 +8,10 @@ class BinaryHeap {
     return Math.floor((i - 1) / 2);
   }
 
+  size() {
+    return this.heap.length;
+  }
+
   left(i) {
     return 2 * i + 1;
   }
@@ -86,19 +90,4 @@ class BinaryHeap {
   }
 }
 
-const sellheap = new BinaryHeap((a, b) => b - a);
-
-[40, 20, 60, 10, 50, 70, 30].forEach((value) => {
-  sellheap.insert(value);
-});
-
-console.log("Heap:", sellheap.heap);
-console.log("Maximum:", sellheap.max_heap());
-
-const removed = [];
-
-while (!sellheap.isempty()) {
-  removed.push(sellheap.deleteMax());
-}
-
-console.log("Deleted in order:", removed);
+module.exports = BinaryHeap;

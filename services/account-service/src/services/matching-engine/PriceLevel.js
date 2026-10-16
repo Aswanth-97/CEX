@@ -18,8 +18,8 @@ class PriceLevel {
     return this.orders.dequeue();
   }
 
-  isempty() {
-    return this.orders.isempty();
+  isEmpty() {
+    return this.orders.isEmpty();
   }
 
   size() {
