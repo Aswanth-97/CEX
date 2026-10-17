@@ -116,9 +116,42 @@ const createMarket = async ({
   return result.rows[0];
 };
 
+const getMarketByIdWithClient = async ({ marketId, client }) => {
+  const result = await client.query(
+    `
+      SELECT
+        m.id,
+        m.symbol,
+        m.base_asset_id,
+        base.symbol AS base_asset,
+        base.decimals AS base_asset_decimals,
+        m.quote_asset_id,
+        quote.symbol AS quote_asset,
+        quote.decimals AS quote_asset_decimals,
+        m.status,
+        m.price_precision,
+        m.quantity_precision,
+        m.min_quantity,
+        m.min_notional,
+        m.created_at,
+        m.updated_at
+      FROM public.markets m
+      JOIN public.assets base
+        ON base.id = m.base_asset_id
+      JOIN public.assets quote
+        ON quote.id = m.quote_asset_id
+      WHERE m.id = $1
+    `,
+    [marketId],
+  );
+
+  return result.rows[0] || null;
+};
+
 module.exports = {
   getAllMarkets,
   getMarketById,
   getMarketBySymbol,
   createMarket,
+  getMarketByIdWithClient,
 };

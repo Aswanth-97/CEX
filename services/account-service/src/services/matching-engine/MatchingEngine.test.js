@@ -19,7 +19,7 @@ function makeOrder(id, side, price, quantity, marketId = DEFAULT_MARKET_ID) {
     side,
     price,
     marketId,
-    remainingQuantity: new Decimal(quantity), 
+    remainingQuantity: new Decimal(quantity),
   };
 }
 
@@ -285,12 +285,44 @@ test("rejects an incoming order from a different market", () => {
 
   book.addOrder(restingSell);
 
-  assert.throws(
-    () => engine.matchOrder(incomingBuy),
-    /market does not match/i,
-  );
+  assert.throws(() => engine.matchOrder(incomingBuy), /market does not match/i);
 
   assert.equal(restingSell.remainingQuantity.toString(), "1");
   assert.equal(incomingBuy.remainingQuantity.toString(), "1");
   assert.equal(book.getBestSell()?.getFirstOrder(), restingSell);
+});
+
+test("plans matches without modifying the order book", () => {
+  const { book, engine } = createOrderBook();
+
+  const sell1 = makeOrder("sell-1", "SELL", 59000, "0.3");
+  const sell2 = makeOrder("sell-2", "SELL", 59000, "0.4");
+  const sell3 = makeOrder("sell-3", "SELL", 60000, "0.5");
+  const buy = makeOrder("buy-1", "BUY", 61000, "0.8");
+
+  book.addOrder(sell1);
+  book.addOrder(sell2);
+  book.addOrder(sell3);
+
+  const result = engine.planMatchOrder(buy);
+
+  assert.deepEqual(
+    result.fills.map((fill) => [fill.sellOrderId, fill.quantity]),
+    [
+      ["sell-1", "0.3"],
+      ["sell-2", "0.4"],
+      ["sell-3", "0.1"],
+    ],
+  );
+
+  assert.equal(result.remainingQuantity, "0");
+
+  assert.equal(buy.remainingQuantity.toString(), "0.8");
+  assert.equal(sell1.remainingQuantity.toString(), "0.3");
+  assert.equal(sell2.remainingQuantity.toString(), "0.4");
+  assert.equal(sell3.remainingQuantity.toString(), "0.5");
+
+  // The live order book must retain its original queues.
+  assert.deepEqual(book.sellLevels.get(59000).orders.queue, [sell1, sell2]);
+  assert.deepEqual(book.sellLevels.get(60000).orders.queue, [sell3]);
 });

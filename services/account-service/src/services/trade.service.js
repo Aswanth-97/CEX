@@ -1,5 +1,7 @@
 const orderRepository = require("../repositories/order.repository");
 const tradeRepository = require("../repositories/trade.repository");
+const marketRepository = require("../repositories/market.repository");
+const balanceRepository = require("../repositories/balance.repository");
 const pool = require("../config/db");
 const logger = require("../utils/logger");
 const Decimal = require("decimal.js");
@@ -88,6 +90,19 @@ const executeTrade = async ({ buyOrderId, sellOrderId, price, quantity }) => {
       throw error;
     }
 
+    const tradeValue = executionPrice.mul(executionQuantity);
+
+    const market = await marketRepository.getMarketByIdWithClient({
+      client,
+      marketId: buyOrder.market_id,
+    });
+
+    if (!market) {
+      const error = new Error("Market not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
     const trade = await tradeRepository.createTradeWithClient({
       client,
       marketId: buyOrder.market_id,
@@ -111,6 +126,55 @@ const executeTrade = async ({ buyOrderId, sellOrderId, price, quantity }) => {
 
     if (!updatedBuyOrder || !updatedSellOrder) {
       throw new Error("Failed to update one or both order fills");
+    }
+
+    await balanceRepository.creditBalance({
+      client,
+      accountId: sellOrder.account_id,
+      assetId: market.quote_asset_id,
+      amount: tradeValue.toString(),
+    });
+
+    const sellerBalance = await balanceRepository.finalizeWithdrawalBalance({
+      client,
+      accountId: sellOrder.account_id,
+      assetId: market.base_asset_id,
+      amount: executionQuantity.toString(),
+    });
+
+    if (!sellerBalance) {
+      throw new Error("Failed to deduct seller's locked  balance");
+    }
+
+    const refund = buyPrice.minus(executionPrice).mul(executionQuantity);
+
+    const buyerReservedAmount = buyPrice.mul(executionQuantity);
+
+    const buyerBalance = await balanceRepository.finalizeWithdrawalBalance({
+      client,
+      accountId: buyOrder.account_id,
+      assetId: market.quote_asset_id,
+      amount: buyerReservedAmount.toString(),
+    });
+
+    if (!buyerBalance) {
+      throw new Error("Failed to deduct buyer's locked balance");
+    }
+
+    await balanceRepository.creditBalance({
+      client,
+      accountId: buyOrder.account_id,
+      assetId: market.base_asset_id,
+      amount: executionQuantity.toString(),
+    });
+
+    if (refund.gt(0)) {
+      await balanceRepository.creditBalance({
+        client,
+        accountId: buyOrder.account_id,
+        assetId: market.quote_asset_id,
+        amount: refund.toString(),
+      });
     }
 
     await client.query("COMMIT");

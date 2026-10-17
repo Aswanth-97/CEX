@@ -138,7 +138,7 @@ const lockBalanceForOrder = async ({ client, balanceId, amount }) => {
         updated_at = NOW()
       WHERE id = $2
         AND available_balance >= $1
-      RETURNING *
+      RETURNING * 
     `,
     [amount, balanceId],
   );
